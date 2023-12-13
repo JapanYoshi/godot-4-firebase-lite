@@ -18,7 +18,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-firebase="*res://plugins/firebase_app_lite/firebase.gd"
+firebase="*res://addons/firebase_app_lite/firebase.gd"
 
 [rendering]
 

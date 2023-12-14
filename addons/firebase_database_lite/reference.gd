@@ -125,21 +125,21 @@ func _db_request(parse_response : bool, method, body : String = "") -> Object:
 			if response[1] == HTTPClient.RESPONSE_OK:
 				if parse_response:
 					var jpr = json.parse(response[3].get_string_from_utf8())
-					if jpr.error == OK:
-						return jpr.result
+					if jpr == OK:
+						return FirebaseOk.new(json.data)
 					else:
-						push_error("Database JSON parse error: " + jpr.error_line + ": " + jpr.error_string)
+						push_error("Database JSON parse error: " + str(json.get_error_line()) + ": " + json.get_error_message())
 						return FirebaseError.new("http/response-parse-error")
 				else:
-					return FirebaseOk.new()
+					return FirebaseOk.new({body: response[3].get_string_from_utf8()})
 			else:
 				var rbody = response[3].get_string_from_utf8()
 				var jpr = json.parse(rbody)
-				if jpr.error == OK and jpr.result.has("error"):
+				if jpr == OK and json.data.has("error"):
 					#TODO: maybe expand this to "database/better-codes-here"
 					# or maybe: return FirebaseError.new("database/" + jpr.result.error.to_lower().replace(" ", "-"))
 					# actually: return FirebaseError.new("database/" + jpr.result.error.substr(0, jpr.result.error.find(";")).to_lower().replace(" ", "-"))  # up to first ";"
-					rbody = jpr.result.error
+					rbody = json.data.error
 				push_error("Database response error code: " + String(response[1]) + " " + rbody)
 				return FirebaseError.new("http/response-error")
 		else:
@@ -273,7 +273,7 @@ func _get_auth_path_suffix(is_get : bool = false) -> String:
 	if result is FirebaseError:
 		print_debug("Auth request failed: Firebase token expired or other error.")
 	else:
-		suffix += query_delim + AUTH + EQUALS + result
+		suffix += query_delim + AUTH + EQUALS + result.data.result
 	return suffix
 
 

@@ -85,15 +85,15 @@ func _auth_request(uri : String, headers : PackedStringArray, body : String) -> 
 			var rbody = response[3].get_string_from_utf8()
 			var jpr = json.parse(rbody)
 			if response[1] == HTTPClient.RESPONSE_OK:
-				if jpr.error == OK:
-					return jpr.result
+				if jpr == OK:
+					return FirebaseOk.new(json.data)
 				else:
-					push_error("Auth JSON parse error: " + jpr.error_line + ": " + jpr.error_string)
+					push_error("Auth JSON parse error: " + str(json.get_error_line()) + ": " + json.get_error_message())
 					return FirebaseError.new("http/response-parse-error")
 			else:
 				# https://firebase.google.com/docs/reference/rest/auth#section-error-format
-				if jpr.result.has("error"):
-					return FirebaseError.new(ErrorUtil.translate_error("auth", jpr.result.error.message))
+				if jpr != OK:
+					return FirebaseError.new(ErrorUtil.translate_error("auth", json.get_error_message()))
 				else:
 					push_error("Auth response error code: " + String(response[1]) + " " + rbody)
 					return FirebaseError.new("http/response-error")
@@ -178,6 +178,7 @@ func sign_in_anonymously() -> Object:
 	if result is FirebaseError:
 		return result
 	else:
+		result = (result as FirebaseOk).data
 		current_user = FirebaseUser.new(
 			self,
 			result.localId,
@@ -228,7 +229,7 @@ func send_password_reset_email(email : String) -> Object:
 	if result is FirebaseError:
 		return result
 	else:
-		return FirebaseOk.new()
+		return FirebaseOk.new({})
 
 
 
@@ -260,6 +261,7 @@ func _get_account_info_by_id_token(id_token : String, signing_in : bool = false)
 			sign_out()
 		return result
 	else:
+		result = (result as FirebaseOk).data
 		#print(result)
 		result = result.users[0]
 		#current_user.uid = result.localId  # ??? needed? or use to double check?
@@ -303,7 +305,7 @@ func _delete_current_user() -> Object:
 		return result
 	else:
 		sign_out()
-		return FirebaseOk.new()
+		return FirebaseOk.new({})
 
 
 ################################################################################
@@ -321,6 +323,7 @@ func _reload_current_user() -> Object:
 #TODO: auto sign_out() on error or not? which errors??? certainly "auth/user-token-expired"  which funcs?  or make dev handle it?
 		return result
 	else:
+		result = (result as FirebaseOk).data
 		#current_user.uid = result.user_id  # ??? needed? or use to double check?
 		current_user.refresh_token	= result.refresh_token
 		current_user._set_id_token_result(result.id_token, result.expires_in as int, false)
@@ -329,7 +332,7 @@ func _reload_current_user() -> Object:
 		if result is FirebaseError:
 			return result
 		else:
-			return FirebaseOk.new()
+			return FirebaseOk.new({})
 
 
 ################################################################################
@@ -348,7 +351,7 @@ func _send_current_user_email_verification() -> Object:
 	if result is FirebaseError:
 		return result
 	else:
-		return FirebaseOk.new()
+		return FirebaseOk.new({})
 #################################################################################
 # Sends a verification email to a new email address.
 #
@@ -367,7 +370,7 @@ func _verify_before_update_current_user_email(new_email : String) -> Object:
 	if result is FirebaseError:
 		return result
 	else:
-		return FirebaseOk.new()
+		return FirebaseOk.new({})
 
 
 ################################################################################
@@ -395,7 +398,7 @@ func _update_current_user_email(new_email : String) -> Object:
 		current_user.refresh_token	= result.refreshToken
 		current_user._set_id_token_result(result.idToken, result.expiresIn as int, false)
 		emit_signal("on_id_token_changed", current_user)
-		return FirebaseOk.new()
+		return FirebaseOk.new({})
 
 
 ################################################################################
@@ -421,7 +424,7 @@ func _update_current_user_password(new_password : String) -> Object:
 		current_user.refresh_token	= result.refreshToken
 		current_user._set_id_token_result(result.idToken, result.expiresIn as int, false)
 		emit_signal("on_id_token_changed", current_user)
-		return FirebaseOk.new()
+		return FirebaseOk.new({})
 
 
 ################################################################################
@@ -473,4 +476,4 @@ func _update_current_user_profile(profile : Dictionary) -> Object:
 		current_user.photo_url		= result.photoUrl		if result.has("photoUrl") else ""
 		current_user.provider_data	= result.providerUserInfo #TODO: loop and clean (if I care)
 		current_user.provider_id	= result.providerUserInfo[0].providerId
-		return FirebaseOk.new()
+		return FirebaseOk.new({})

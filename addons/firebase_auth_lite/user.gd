@@ -132,7 +132,7 @@ func get_id_token(force_refresh : bool = false) -> Object:
 		#TODO: This is an annoying hack! Find a better way.
 		#      I tried to build my own dummy func to yield to (or resume from) but failed.
 		await _auth.get_tree().create_timer(0).timeout
-	return _IdTokenResult.token
+	return FirebaseOk.new({result = _IdTokenResult.token})
 
 
 ################################################################################

@@ -8,10 +8,14 @@ class_name FirebaseEventProcessor
 
 
 ###
-# I don't recognize this syntax. Help???
-# The body does nothing, so I'll try commenting it out... -- Haley
+# Mystery resolved: those parens call super.
+# Godot 4 makes this look a bit more normal.
+# ref: Compare the 3.2 and 4.2 docs of this page https://docs.godotengine.org/en/4.2/tutorials/scripting/gdscript/gdscript_basics.html
+# -- Haley
 #func _init(ref: Object).(ref):
 	#pass
+func _init(ref: Object):
+	super(ref)
 
 
 ################################################################################

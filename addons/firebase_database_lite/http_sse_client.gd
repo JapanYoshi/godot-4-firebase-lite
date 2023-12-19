@@ -14,8 +14,6 @@ var state : int = State.DISCONNECTED
 
 const INT_LF := 0x0A
 const INT_COLON := 0x3A
-var EVENT : PackedByteArray = "event".to_ascii_buffer()
-var DATA : PackedByteArray = "data".to_ascii_buffer()
 
 var http := HTTPClient.new()
 var _path : String
@@ -57,10 +55,11 @@ func _process(delta):
 			if chunk.size() > 0:
 				_buffer += chunk
 				if _buffer:
-					#print("ss_event: ", _buffer.get_string_from_utf8())
+					#print("ss_event:-----\n", _buffer.get_string_from_utf8(), "\n----- end ss_event")
 					var events : Array = _parse_event_messages()
 					for e in events:
 						if e.error == OK and e.event != "keep-alive":
+							#print_debug(e.error, e.event)
 							#Signal (instead of call parent func) to allow general-purpose use.
 							emit_signal("sse_event", e)
 
@@ -108,9 +107,11 @@ func _parse_event_messages() -> Array:
 		elif b == INT_LF:
 			# Only keep lines with colons in them.
 			if colon_found:
+				# Just convert to String just once up here.
+				# Also, fixed off-by-one error of end index of _buffer.slice(). -- Haley
 				lines.append([
-					_buffer.slice(last, colon_idx - 1), # label
-					_buffer.slice(colon_idx + 2, i - 1), # value
+					_buffer.slice(last, colon_idx).get_string_from_utf8().strip_edges(), # label
+					_buffer.slice(colon_idx + 1, i).get_string_from_utf8().strip_edges(), # value
 					i + 1  # store the pos for later trimming
 				])
 				colon_found = false
@@ -126,27 +127,31 @@ func _parse_event_messages() -> Array:
 	last = 0
 	var i : int = 0
 	while i < lines.size() - 1:  # can skip the last line (also saves checking for i+1 below)
-		if lines[i][0] == EVENT and lines[i + 1][0] == DATA:
-			var event : String = lines[i][1].get_string_from_utf8()
+		#print_debug("this line says ", lines[i][0], "; next line says ", lines[i+1][0])
+		if lines[i][0] == "event" and lines[i + 1][0] == "data":
+			var event : String = lines[i][1]
 			var data = null
-			var error = OK
+			var error = OK # May be overwritten by String if invalid JSON is parsed. -- Haley
 			# Handle event types and data types.
 			# "keep-alive" is always null, so don't parse it. (unless we want to make sure it is there???)
 			if event != "keep-alive":
-				data = lines[i + 1][1].get_string_from_utf8()
+				data = lines[i + 1][1]
 				if event == "put" or event == "patch":
 					# JSON data.
-					assert(data.length() > 0)
+					# Changed error checking due to different behavior of JSON in Godot 4 -- Haley
 					var jpr = json.parse(data)
-					assert(jpr.error == OK)
-					error = jpr.error
-					data = jpr.result  # could be null even if OK maybe?
+					if jpr == OK:
+						data = json.data # could be null even if OK maybe?
+					else:
+						error = "Error on line %d: %s" % [json.get_error_line(), json.get_error_message()]
 				# "cancel" and "auth_revoked" can return info string.
-			events.append({"event": event, "data": data, "error": error})
+			events.push_back({"event": event, "data": data, "error": error})
+			print_debug("events is now ", events)
 			last = lines[i + 1][2]  # store the pos for later trimming
 			i += 2
 		else:
 			# Skip lines that don't jive.
+			#print("skipping line")
 			i += 1
 
 	# Scrub what we just used from the buffer.

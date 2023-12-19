@@ -14,7 +14,7 @@ class_name FirebaseEventProcessor
 # -- Haley
 #func _init(ref: Object).(ref):
 	#pass
-func _init(ref: Object):
+func _init(ref: FirebaseReference):
 	super(ref)
 
 

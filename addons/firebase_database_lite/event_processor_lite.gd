@@ -28,7 +28,7 @@ class_name FirebaseEventProcessorLite
 
 const SEP : String = "/"
 
-var _ref: Object
+var _ref: FirebaseReference
 var _snap : FirebaseDataSnapshot
 var _debug: bool
 
@@ -40,7 +40,7 @@ var _children_removed_snaps : Array	# stores snapshots of the data to be removed
 var _children_tbd_snaps : Array		# stores snapshots of the data to be removed (potentially)
 
 
-func _init(ref: Object):
+func _init(ref: FirebaseReference):
 	_ref = ref
 	_snap = FirebaseDataSnapshot.new(_ref.key, null)
 	_debug = ref.debug

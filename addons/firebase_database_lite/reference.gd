@@ -140,10 +140,10 @@ func _db_request(parse_response : bool, method, body : String = "") -> Object:
 					# or maybe: return FirebaseError.new("database/" + jpr.result.error.to_lower().replace(" ", "-"))
 					# actually: return FirebaseError.new("database/" + jpr.result.error.substr(0, jpr.result.error.find(";")).to_lower().replace(" ", "-"))  # up to first ";"
 					rbody = json.data.error
-				push_error("Database response error code: " + String(response[1]) + " " + rbody)
+				push_error("Database response error code: " + str(response[1]) + " " + rbody)
 				return FirebaseError.new("http/response-error")
 		else:
-			push_error("Database request result error codes: " + String(response[0]) + " " + String(response[1]))
+			push_error("Database request result error codes: " + str(response[0]) + " " + str(response[1]))
 			return FirebaseError.new("http/request-result-error")
 	else:
 		push_error("Database request error code: " + String(error))
@@ -216,11 +216,11 @@ func push(data = null):
 	var result = await _db_request(true, HTTPClient.METHOD_POST, body)
 	if result is FirebaseError:
 		return result
+	var result_ok: FirebaseOk = (result as FirebaseOk)
+	if _lite:
+		return get_parent().get_reference_lite(_path + SEP + result_ok.data.name, debug)
 	else:
-		if _lite:
-			return get_parent().get_reference_lite(_path + SEP + result.name, debug)
-		else:
-			return get_parent().get_reference(_path + SEP + result.name, debug)
+		return get_parent().get_reference(_path + SEP + result_ok.data.name, debug)
 
 
 ################################################################################
@@ -310,8 +310,9 @@ func enable_listener() -> void:
 			_processor = FirebaseEventProcessor.new(self)
 	if !_listener:
 		_listener = HTTPSSEClient.new()
-		add_child(_listener)
 		_listener.sse_event.connect(_on_sse_event)
+		assert(len(_listener.sse_event.get_connections()) > 0)
+		add_child(_listener)
 		# Find the path suffix.
 		var suffix : String
 		if _auth and _auth.current_user:
@@ -322,7 +323,7 @@ func enable_listener() -> void:
 		#yield(_listener, "sse_event")
 		await self.value_changed
 	# If already listening, don't yield.
-	
+	print("Listener enabled on ", _path)
 
 # Turn off all listener signals.
 # https://firebase.google.com/docs/database/web/read-and-write#detach_listeners
@@ -355,7 +356,7 @@ func disable_listener() -> void:
 #
 # https://firebase.google.com/docs/database/web/lists-of-data#listen_for_child_events
 func _on_sse_event(event : Dictionary) -> void:
-	#print("_on_sse_event: ", event)
+	print("_on_sse_event: ", event)
 	# https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-streaming
 	match event.event:
 		# Update the local/offline copy and trigger events.
